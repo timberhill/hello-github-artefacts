@@ -1,7 +1,12 @@
 ---
-name: publish
+name: publish-image
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/*"
 
 jobs:
   publish-hello-world-image:
@@ -18,7 +23,9 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build the hello-world Docker image
+      working-directory: ./docker
       run: |
-        docker build .  --tag ghcr.io/timberhill/hello-github-artefacts:0.1.1 --tag ghcr.io/timberhill/hello-github-artefacts:latest
-        docker push ghcr.io/timberhill/hello-github-artefacts:0.1.1
+        export VERSION=$(awk '/appVersion:/ {print $2}' ../Chart.yaml | tr -d '"')
+        docker build . --tag ghcr.io/timberhill/hello-github-artefacts:${VERSION} --tag ghcr.io/timberhill/hello-github-artefacts:latest
+        docker push ghcr.io/timberhill/hello-github-artefacts:${VERSION}
         docker push ghcr.io/timberhill/hello-github-artefacts:latest

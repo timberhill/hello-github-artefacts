@@ -1,0 +1,12 @@
+---
+image: ghcr.io/timberhill/hello-github-artefacts
+tag: ""
+pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 100Mi
+  limits:
+    cpu: 1000m
+    memory: 500Mi
