@@ -1,0 +1,40 @@
+---
+name: Publish chart
+
+on:
+  workflow_run:
+    workflows:
+      - tag-repo
+    types:
+      - completed
+    
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Get the latest tag
+      id: latest_tag
+      run: |
+        git fetch --tags
+        export VERSION=$(git tag -l | sort -V --reverse | head -n 1)
+        echo "Latest tag: ${VERSION}"
+        echo ::set-output name=value::"${VERSION//v}"
+    outputs:
+      version: ${{ steps.latest_tag.outputs.value }}
+
+  publish-image:
+    runs-on: ubuntu-latest
+    needs:
+      - version
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Package and push (DUMMY)
+      working-directory: ./docker
+      run: |
+        helm package . --version ${{ needs.version.outputs.version }}

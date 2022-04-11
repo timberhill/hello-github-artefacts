@@ -1,19 +1,42 @@
 ---
-name: publish-image
+name: Publish image
 
 on:
   push:
+    paths: 
+      - "docker/**"
     branches:
       - main
-    paths:
-      - "docker/*"
 
 jobs:
-  publish-hello-world-image:
+  version:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Get the appVersion
+      id: latest_tag
+      run: |
+        export VERSION=$(awk '/appVersion:/ {print $2}' Chart.yaml | tr -d '"')
+        echo "appVersion: ${VERSION}"
+        echo ::set-output name=value::"${VERSION//v}"
+    outputs:
+      version: ${{ steps.latest_tag.outputs.value }}
+
+  publish-image:
+    runs-on: ubuntu-latest
+    needs:
+      - version
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v1
@@ -22,10 +45,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build the hello-world Docker image
+    - name: Build and push
       working-directory: ./docker
       run: |
-        export VERSION=$(awk '/appVersion:/ {print $2}' ../Chart.yaml | tr -d '"')
-        docker build . --tag ghcr.io/timberhill/hello-github-artefacts:${VERSION} --tag ghcr.io/timberhill/hello-github-artefacts:latest
-        docker push ghcr.io/timberhill/hello-github-artefacts:${VERSION}
-        docker push ghcr.io/timberhill/hello-github-artefacts:latest
+        docker buildx build . --platform linux/amd64,linux/arm64,linux/arm/v7 --tag ghcr.io/timberhill/hello-github-artefacts:${{ needs.version.outputs.version }} --tag ghcr.io/timberhill/hello-github-artefacts:latest --push
